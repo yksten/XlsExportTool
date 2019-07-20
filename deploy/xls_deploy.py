@@ -148,7 +148,7 @@ class SheetInterpreter:
         self._pb_file_name = sheet_name + ".proto"
     
     def hasEnum(self, col_idx) :
-        field_type = str(self._sheet.cell_value(FIELD_TYPE_ROW, col_idx)).strip()
+        field_type = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, col_idx)).strip()
         if field_type.find('enum-') == 0 :
             return True
         return False
@@ -208,13 +208,13 @@ class SheetInterpreter:
 
     def _FieldDefine(self, repeated_num) :
         LOG_INFO("row=%d, col=%d, repeated_num=%d", self._row, self._col, repeated_num)
-        field_rule = str(self._sheet.cell_value(FIELD_RULE_ROW, self._col))
+        field_rule = unicode(self._sheet.cell_value(FIELD_RULE_ROW, self._col))
 
         if len(field_rule) > 0 and field_rule.find('[]') == -1 :
-            field_type = str(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
+            field_type = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
             if field_type.find('enum-') == 0 :
                 field_type = field_type[len('enum-'):len(field_type)]
-            field_name = str(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
+            field_name = unicode(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
             field_comment = unicode(self._sheet.cell_value(FIELD_COMMENT_ROW, self._col))
 
             LOG_INFO("%s|%s|%s|%s", field_rule, field_type, field_name, field_comment)
@@ -232,7 +232,7 @@ class SheetInterpreter:
 
         elif len(field_rule) > 0 and field_rule.find('[]') != -1 :
             # 若repeated第二行是类型定义，则表示当前字段是repeated，并且数据在单列用分好相隔
-            second_row = str(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
+            second_row = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
             LOG_DEBUG("repeated|%s", second_row);
             # exel有可能有小数点
             if second_row.isdigit() or second_row.find(".") != -1 :
@@ -244,7 +244,7 @@ class SheetInterpreter:
             else :
                 # 一般是简单的单字段，数值用分号相隔
                 field_type = second_row
-                field_name = str(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
+                field_name = unicode(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
                 field_type = field_type[0: len(field_type) - 2]
                 field_comment = unicode(self._sheet.cell_value(FIELD_COMMENT_ROW, self._col))
                 LOG_INFO("%s|%s|%s|%s", field_rule, field_type, field_name, field_comment)
@@ -323,8 +323,8 @@ class SheetInterpreter:
         if field_name.find('=') > 0 :
             name_and_value = field_name.split('=')
             self._output.append(" "*self._indentation + field_rule + " " + field_type \
-                    + " " + str(name_and_value[0]).strip() + " = " + self._GetAndAddFieldIndex()\
-                    + " [default = " + str(name_and_value[1]).strip() + "]" + ";\n")
+                    + " " + unicode(name_and_value[0]).strip() + " = " + self._GetAndAddFieldIndex()\
+                    + " [default = " + unicode(name_and_value[1]).strip() + "]" + ";\n")
             return
 
         if (field_rule == "repeated") :
@@ -360,7 +360,7 @@ class SheetInterpreter:
 
     def _GetAndAddFieldIndex(self) :
         """获得字段的序号, 并将序号增加"""
-        index = str(self._field_index_list[- 1])
+        index = unicode(self._field_index_list[- 1])
         self._field_index_list[-1] += 1
         return index
 
@@ -417,7 +417,7 @@ class DataParser:
         # 先找到定义ID的列
         id_col = 0
         for id_col in range(0, self._col_count) :
-            info_id = str(self._sheet.cell_value(self._row, id_col)).strip()
+            info_id = unicode(self._sheet.cell_value(self._row, id_col)).strip()
             if info_id == "" :
                 continue
             else :
@@ -425,7 +425,7 @@ class DataParser:
 
         for self._row in range(3, self._row_count) :
             # 如果 id 是 空 直接跳过改行
-            info_id = str(self._sheet.cell_value(self._row, id_col)).strip()
+            info_id = unicode(self._sheet.cell_value(self._row, id_col)).strip()
             if info_id == "" :
                 LOG_WARN("%d is None", self._row)
                 continue
@@ -434,7 +434,7 @@ class DataParser:
 
         LOG_INFO("parse result:\n%s", item_array)
 
-        self._WriteReadableData2File(str(item_array))
+        self._WriteReadableData2File(unicode(item_array))
 
         data = item_array.SerializeToString()
         self._WriteData2File(data)
@@ -450,14 +450,14 @@ class DataParser:
             self._ParseField(0, 0, item)
 
     def _ParseField(self, max_repeated_num, repeated_num, item) :
-        field_rule = str(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
+        field_rule = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
 
         if field_rule.find('[]') == -1 :
-            field_name = str(self._sheet.cell_value(2, self._col)).strip()
+            field_name = unicode(self._sheet.cell_value(2, self._col)).strip()
             if field_name.find('=') > 0 :
                 name_and_value = field_name.split('=')
-                field_name = str(name_and_value[0]).strip()
-            field_type = str(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
+                field_name = unicode(name_and_value[0]).strip()
+            field_type = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
 
             LOG_INFO("%d|%d", self._row, self._col)
             LOG_INFO("%s|%s|%s", field_rule, field_type, field_name)
@@ -483,7 +483,7 @@ class DataParser:
 
         elif field_rule.find('[]') != -1 :
             # 若repeated第二行是类型定义，则表示当前字段是repeated，并且数据在单列用分好相隔
-            second_row = str(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
+            second_row = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
             second_row = second_row[0: len(second_row) - 2]
             LOG_DEBUG("repeated|%s", second_row);
             # exel有可能有小数点
@@ -509,7 +509,7 @@ class DataParser:
                 # 一般是简单的单字段，数值用分号相隔
                 # 一般也只能是数字类型
                 field_type = second_row
-                field_name = str(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
+                field_name = unicode(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
                 field_value_str = unicode(self._sheet.cell_value(self._row, self._col))
                 #field_value_str = unicode(self._sheet.cell_value(self._row, self._col)).strip()
 
@@ -521,7 +521,7 @@ class DataParser:
                     if field_value_str.find(";\n") > 0 :
                         field_value_list = field_value_str.split(";\n")
                     else :
-                        field_value_list = field_value_str.split(";")
+                        field_value_list = field_value_str.split("|")
 
                     for field_value in field_value_list :
                         if field_type == "bytes" or field_type == "string":
@@ -533,8 +533,8 @@ class DataParser:
 
         elif field_rule == "required_struct" or field_rule == "optional_struct":
             field_num = int(self._sheet.cell_value(FIELD_TYPE_ROW, self._col))
-            struct_name = str(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
-            field_name = str(self._sheet.cell_value(FIELD_COMMENT_ROW, self._col)).strip()
+            struct_name = unicode(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
+            field_name = unicode(self._sheet.cell_value(FIELD_COMMENT_ROW, self._col)).strip()
 
             LOG_INFO("%s|%d|%s|%s", field_rule, field_num, struct_name, field_name)
 
@@ -592,12 +592,12 @@ class DataParser:
                     or field_type == "sint32" or field_type == "sint64"\
                     or field_type == "fixed32" or field_type == "fixed64"\
                     or field_type == "sfixed32" or field_type == "sfixed64" :
-                        if len(str(field_value).strip()) <=0 :
+                        if len(unicode(field_value).strip()) <=0 :
                             return None
                         else :
                             return int(field_value)
             elif field_type == "double" or field_type == "float" :
-                    if len(str(field_value).strip()) <=0 :
+                    if len(unicode(field_value).strip()) <=0 :
                         return None
                     else :
                         return float(field_value)
