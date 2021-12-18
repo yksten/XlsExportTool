@@ -1,0 +1,23 @@
+/**
+* @file:   example.proto
+* @brief:  文件通过工具自动生成，不建议手动修改
+*/
+
+syntax = "proto3";
+package cfg;
+import "enum.proto";
+
+message example {
+   /** ID */
+   uint32 id = 1;
+   /** TYPE */
+   exampleType type = 2;
+   /** MAKE */
+   string make = 3;
+   /** RELATION */
+   repeated int32 relation = 4;
+}
+
+message example_array {
+    repeated example items = 1;
+}

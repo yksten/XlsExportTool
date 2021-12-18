@@ -86,8 +86,8 @@ class LogHelp :
         import logging
 
         LogHelp._logger = logging.getLogger()
-        CheckAndCreateDir('log')
-        logfile = './log/comm_deploy_tool.log'
+        CheckAndCreateDir('build_out/log')
+        logfile = './build_out/log/comm_deploy_tool.log'
         hdlr = logging.FileHandler(logfile)
         formatter = logging.Formatter('%(asctime)s|%(levelname)s|%(lineno)d|%(funcName)s|%(message)s')
         hdlr.setFormatter(formatter)
@@ -148,7 +148,7 @@ class SheetInterpreter:
         self._pb_file_name = sheet_name + ".proto"
     
     def hasEnum(self, col_idx) :
-        field_type = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, col_idx)).strip()
+        field_type = str(self._sheet.cell_value(FIELD_TYPE_ROW, col_idx)).strip()
         if field_type.find('enum-') == 0 :
             return True
         return False
@@ -179,27 +179,21 @@ class SheetInterpreter:
 
         self._Write2File()
 
-        CheckAndCreateDir('pb')
+        CheckAndCreateDir('build_out/cpp')
         if platform.system() == "Windows" :
-            cmd = "%cd%\proto\protoc -I=%cd%\src\ --cpp_out=pb %cd%\src\enum.proto"
-            command = "%cd%\proto\protoc -I=%cd%\src\ --cpp_out=pb %cd%\src\\"+ self._pb_file_name
+            command = "%cd%\deploy\proto\protoc -I=%cd%\protocol\ --cpp_out=build_out\\cpp %cd%\protocol\\"+ self._pb_file_name
         else :
-            cmd = "$(cd `dirname $0`;pwd)/proto/protoc -I=./src --cpp_out=pb ./src/enum.proto"
-            command = "$(cd `dirname $0`;pwd)/proto/protoc -I=./src --cpp_out=pb ./src/"+ self._pb_file_name
-        # os.system(cmd)
+            command = "$(cd `dirname $0`;pwd)/deploy/proto/protoc -I=./protocol/ --cpp_out=build_out/cpp ./protocol/"+ self._pb_file_name
         os.system(command)
 
         LogHelp.close()
         # 将PB转换成py格式
         try :
-            CheckAndCreateDir('py')
+            CheckAndCreateDir('build_out/py')
             if platform.system() == "Windows" :
-                cmd = "%cd%\proto\protoc -I=%cd%\src\ --python_out=py %cd%\src\enum.proto"
-                command = "%cd%\proto\protoc -I=%cd%\src\ --python_out=py %cd%\src\\" + self._pb_file_name
+                command = "%cd%\deploy\proto\protoc -I=%cd%\protocol\ --python_out=build_out/py %cd%\protocol\\" + self._pb_file_name
             else :
-                cmd = "$(cd `dirname $0`;pwd)/proto/protoc -I=./src --python_out=py ./src/enum.proto"
-                command = "$(cd `dirname $0`;pwd)/proto/protoc -I=./src --python_out=py ./src/" + self._pb_file_name
-            # os.system(cmd)
+                command = "$(cd `dirname $0`;pwd)/deploy/proto/protoc -I=./protocol/ --python_out=build_out/py ./protocol/" + self._pb_file_name
             os.system(command)
         #except BaseException, e :
         except Exception as e:
@@ -208,13 +202,12 @@ class SheetInterpreter:
 
     def _FieldDefine(self, repeated_num) :
         LOG_INFO("row=%d, col=%d, repeated_num=%d", self._row, self._col, repeated_num)
-        field_rule = unicode(self._sheet.cell_value(FIELD_RULE_ROW, self._col))
-
+        field_rule = str(self._sheet.cell_value(FIELD_RULE_ROW, self._col))
         if len(field_rule) > 0 and field_rule.find('[]') == -1 :
-            field_type = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
+            field_type = str(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
             if field_type.find('enum-') == 0 :
                 field_type = field_type[len('enum-'):len(field_type)]
-            field_name = unicode(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
+            field_name = str(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
             field_comment = unicode(self._sheet.cell_value(FIELD_COMMENT_ROW, self._col))
 
             LOG_INFO("%s|%s|%s|%s", field_rule, field_type, field_name, field_comment)
@@ -232,7 +225,7 @@ class SheetInterpreter:
 
         elif len(field_rule) > 0 and field_rule.find('[]') != -1 :
             # 若repeated第二行是类型定义，则表示当前字段是repeated，并且数据在单列用分好相隔
-            second_row = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
+            second_row = str(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
             LOG_DEBUG("repeated|%s", second_row);
             # exel有可能有小数点
             if second_row.isdigit() or second_row.find(".") != -1 :
@@ -244,7 +237,7 @@ class SheetInterpreter:
             else :
                 # 一般是简单的单字段，数值用分号相隔
                 field_type = second_row
-                field_name = unicode(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
+                field_name = str(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
                 field_type = field_type[0: len(field_type) - 2]
                 field_comment = unicode(self._sheet.cell_value(FIELD_COMMENT_ROW, self._col))
                 LOG_INFO("%s|%s|%s|%s", field_rule, field_type, field_name, field_comment)
@@ -294,7 +287,7 @@ class SheetInterpreter:
         if not self._is_layout :
             return
         self._output.append("\n")
-        self._output.append(" "*self._indentation + "message " + struct_name + "{\n")
+        self._output.append(" "*self._indentation + "message " + struct_name + " {\n")
 
     def _LayoutStructTail(self) :
         """生成结构尾"""
@@ -323,8 +316,8 @@ class SheetInterpreter:
         if field_name.find('=') > 0 :
             name_and_value = field_name.split('=')
             self._output.append(" "*self._indentation + field_rule + " " + field_type \
-                    + " " + unicode(name_and_value[0]).strip() + " = " + self._GetAndAddFieldIndex()\
-                    + " [default = " + unicode(name_and_value[1]).strip() + "]" + ";\n")
+                    + " " + str(name_and_value[0]).strip() + " = " + self._GetAndAddFieldIndex()\
+                    + " [default = " + str(name_and_value[1]).strip() + "]" + ";\n")
             return
 
         if (field_rule == "repeated") :
@@ -360,7 +353,7 @@ class SheetInterpreter:
 
     def _GetAndAddFieldIndex(self) :
         """获得字段的序号, 并将序号增加"""
-        index = unicode(self._field_index_list[- 1])
+        index = str(self._field_index_list[- 1])
         self._field_index_list[-1] += 1
         return index
 
@@ -371,8 +364,8 @@ class SheetInterpreter:
 
     def _Write2File(self) :
         """输出到文件"""
-        CheckAndCreateDir('src')
-        pb_file = open("src/" + self._pb_file_name, "w+")
+        CheckAndCreateDir('protocol')
+        pb_file = open("protocol/" + self._pb_file_name, "w+")
         pb_file.writelines(self._output)
         pb_file.close()
 
@@ -385,12 +378,12 @@ class DataParser:
         self._row_count = len(self._sheet.col_values(0))
         self._col_count = len(self._sheet.row_values(0))
 
-        self._row = 0
+        self._row = FIELD_RULE_ROW
         self._col = 0
 
         try:
             self._module_name = self._sheet_name + "_pb2"
-            sys.path.append(os.getcwd() +"/py/")
+            sys.path.append(os.getcwd() +"/build_out/py/")
             exec('from '+self._module_name + ' import *');
             self._module = sys.modules[self._module_name]
         #except BaseException, e :
@@ -400,7 +393,7 @@ class DataParser:
         
         try:
             self._enum_module_name = "enum_pb2"
-            sys.path.append(os.getcwd() +"/py/")
+            sys.path.append(os.getcwd() +"/build_out/py/")
             exec('from '+self._enum_module_name + ' import *');
             self._enum_module = sys.modules[self._enum_module_name]
         #except BaseException, e :
@@ -417,7 +410,7 @@ class DataParser:
         # 先找到定义ID的列
         id_col = 0
         for id_col in range(0, self._col_count) :
-            info_id = unicode(self._sheet.cell_value(self._row, id_col)).strip()
+            info_id = str(self._sheet.cell_value(self._row, id_col))
             if info_id == "" :
                 continue
             else :
@@ -425,7 +418,7 @@ class DataParser:
 
         for self._row in range(3, self._row_count) :
             # 如果 id 是 空 直接跳过改行
-            info_id = unicode(self._sheet.cell_value(self._row, id_col)).strip()
+            info_id = str(self._sheet.cell_value(self._row, id_col)).strip()
             if info_id == "" :
                 LOG_WARN("%d is None", self._row)
                 continue
@@ -433,8 +426,7 @@ class DataParser:
             self._ParseLine(item)
 
         LOG_INFO("parse result:\n%s", item_array)
-
-        self._WriteReadableData2File(unicode(item_array))
+        self._WriteReadableData2File(str(item_array))
 
         data = item_array.SerializeToString()
         self._WriteData2File(data)
@@ -450,14 +442,14 @@ class DataParser:
             self._ParseField(0, 0, item)
 
     def _ParseField(self, max_repeated_num, repeated_num, item) :
-        field_rule = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
+        field_rule = str(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
 
         if field_rule.find('[]') == -1 :
-            field_name = unicode(self._sheet.cell_value(2, self._col)).strip()
+            field_name = str(self._sheet.cell_value(2, self._col)).strip()
             if field_name.find('=') > 0 :
                 name_and_value = field_name.split('=')
-                field_name = unicode(name_and_value[0]).strip()
-            field_type = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
+                field_name = str(name_and_value[0]).strip()
+            field_type = str(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
 
             LOG_INFO("%d|%d", self._row, self._col)
             LOG_INFO("%s|%s|%s", field_rule, field_type, field_name)
@@ -482,10 +474,10 @@ class DataParser:
                 self._col += max_repeated_num
 
         elif field_rule.find('[]') != -1 :
-            # 若repeated第二行是类型定义，则表示当前字段是repeated，并且数据在单列用分好相隔
-            second_row = unicode(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
+            # 若repeated第二行是类型定义，则表示当前字段是repeated，并且数据在单列用分号相隔
+            second_row = str(self._sheet.cell_value(FIELD_TYPE_ROW, self._col)).strip()
             second_row = second_row[0: len(second_row) - 2]
-            LOG_DEBUG("repeated|%s", second_row);
+            LOG_DEBUG("repeated|%s", second_row)
             # exel有可能有小数点
             if second_row.isdigit() or second_row.find(".") != -1 :
                 # 这里后面一般会是一个结构体
@@ -509,17 +501,16 @@ class DataParser:
                 # 一般是简单的单字段，数值用分号相隔
                 # 一般也只能是数字类型
                 field_type = second_row
-                field_name = unicode(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
-                field_value_str = unicode(self._sheet.cell_value(self._row, self._col))
-                #field_value_str = unicode(self._sheet.cell_value(self._row, self._col)).strip()
+                field_name = str(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
+                field_value_str = str(self._sheet.cell_value(self._row, self._col))
+                #field_value_str = str(self._sheet.cell_value(self._row, self._col)).strip()
 
                 # LOG_INFO("%d|%d|%s|%s|%s",
                 #         self._row, self._col, field_rule, field_type, field_name, field_value_str)
-
                 #增加长度判断
                 if len(field_value_str) > 0:
-                    if field_value_str.find(";\n") > 0 :
-                        field_value_list = field_value_str.split(";\n")
+                    if field_value_str.find(";") > 0 :
+                        field_value_list = field_value_str.split(";")
                     else :
                         field_value_list = field_value_str.split("|")
 
@@ -533,7 +524,7 @@ class DataParser:
 
         elif field_rule == "required_struct" or field_rule == "optional_struct":
             field_num = int(self._sheet.cell_value(FIELD_TYPE_ROW, self._col))
-            struct_name = unicode(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
+            struct_name = str(self._sheet.cell_value(FIELD_NAME_ROW, self._col)).strip()
             field_name = unicode(self._sheet.cell_value(FIELD_COMMENT_ROW, self._col)).strip()
 
             LOG_INFO("%s|%d|%s|%s", field_rule, field_num, struct_name, field_name)
@@ -592,12 +583,12 @@ class DataParser:
                     or field_type == "sint32" or field_type == "sint64"\
                     or field_type == "fixed32" or field_type == "fixed64"\
                     or field_type == "sfixed32" or field_type == "sfixed64" :
-                        if len(unicode(field_value).strip()) <=0 :
+                        if len(str(field_value).strip()) <=0 :
                             return None
                         else :
                             return int(field_value)
             elif field_type == "double" or field_type == "float" :
-                    if len(unicode(field_value).strip()) <=0 :
+                    if len(str(field_value).strip()) <=0 :
                         return None
                     else :
                         return float(field_value)
@@ -607,7 +598,7 @@ class DataParser:
                 else :
                     return field_value
             elif field_type == "bytes" :
-                field_value = unicode(field_value).encode('utf-8')
+                field_value = str(field_value).encode('utf-8')
                 if len(field_value) <= 0 :
                     return None
                 else :
@@ -625,15 +616,15 @@ class DataParser:
             raise
 
     def _WriteData2File(self, data) :
-        CheckAndCreateDir('bin')
-        file_name = "./bin/" + self._sheet_name + ".bin"
+        CheckAndCreateDir('build_out/bin')
+        file_name = "./build_out/bin/" + self._sheet_name + ".bin"
         file = open(file_name, 'wb+')
         file.write(data)
         file.close()
 
     def _WriteReadableData2File(self, data) :
-        CheckAndCreateDir('log')
-        file_name = "./log/" + self._sheet_name + ".txt"
+        CheckAndCreateDir('build_out/log')
+        file_name = "./build_out/log/" + self._sheet_name + ".txt"
         file = open(file_name, 'wb+')
         file.write(data)
         file.close()
@@ -646,12 +637,12 @@ if __name__ == '__main__' :
         print("Usage: %s sheet_name(should be upper) xls_file" %(sys.argv[0]))
         sys.exit(-1)
 
-    # option 0 生成proto和data 1 只生成proto 2 只生成data
-    op = 0
+# option 0 生成proto和data 1 只生成proto 2 只生成data
+op = 0
         
 xls_file_path =  sys.argv[1]
 wb = xlrd.open_workbook(xls_file_path)
- 
+
 #获取workbook中所有的表格
 sheets = wb.sheet_names()
 #print(sheets)
@@ -659,11 +650,19 @@ sheets = wb.sheet_names()
 #循环遍历所有sheet
 for i in range(len(sheets)):
     sheet_name = sheets[i]
+    struct_name = sheet_name
+    strlist = sheet_name.split('-')
+    if len(strlist) == 2:
+        struct_name = strlist[0]
+    else :
+        print('sheet: ' + struct_name + "has no '-'")
+        continue
+
     sheet = wb.sheet_by_name(sheet_name)
 
     if op == 0 or op == 1:
         try :
-            tool = SheetInterpreter(sheet, sheet_name)
+            tool = SheetInterpreter(sheet, struct_name)
             tool.Interpreter()
         #except BaseException, e :
         except Exception as e:
@@ -675,7 +674,7 @@ for i in range(len(sheets)):
 
     if op == 0 or op == 2:
         try :
-            parser = DataParser(sheet, sheet_name)
+            parser = DataParser(sheet, struct_name)
             parser.Parse()
         #except BaseException, e :
         except Exception as e:
